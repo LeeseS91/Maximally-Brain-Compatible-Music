@@ -1,0 +1,164 @@
+clear all
+
+filename='binopus10_32beats.mat';
+% filename=[file '.txt'];
+songthing=load(filename);
+song=songthing.textformat;
+showsong=0;
+% initialise data
+N=12; % max length of pattern analysed
+for iterate=1:10
+for barsize=32;
+%     for count=1:5
+        NN=2; % number of different sounds
+        M=barsize;
+        
+        l=6; % length of random generated sequence before starting the song creation
+        error=0;
+        ptime=0.1; % speed of playback
+        nmark=0;
+        jjmark=0;
+        equalcount=0;
+        
+        count=0;
+        change=0;
+        changeindex=[];
+        equalindex=[];
+        maxpred=0;
+        
+        % initialise the song and probability matrices M=10;
+        %
+        
+        barcount=1;
+        barpatcount=zeros(1,M);
+        ii=0;
+        add=0;
+        barcell_pattern=cell(M,4);
+        
+        
+        for j=1:(length(song));
+            if j>=barsize
+                if rem(j,barsize)==0;
+                    ii=ii+1;
+                    tempbarpattern=song(j-(barsize-1):j);
+                    if barcount==1
+                        bar_pattern(1,:)=tempbarpattern;
+                        bar_patterncount(1)=1;
+                        barindex=1;
+                        barcount=barcount+1;
+                    else
+                        if sum(ismember(bar_pattern(:,1:barsize), tempbarpattern,'rows'))==1
+                            barindex=find(ismember(bar_pattern(:,1:barsize), tempbarpattern,'rows')==1);
+                            bar_patterncount(barindex)=bar_patterncount(barindex)+1;
+                            add=0;
+                        else
+                            bar_pattern(barcount,:)=tempbarpattern;
+                            bar_patterncount(barcount)=1;
+                            barindex=barcount;
+                            barcount=barcount+1;
+                            add=1;
+                        end
+                    end
+                    barseq(ii)=barindex;
+                    
+                    clear barindex
+                    clear tempbarpattern
+                end
+            end
+        end
+        
+        NN=length(unique(barseq));
+        cell_pattern=cell(N,4);
+        cell_pattern{1,1}=[];
+        cell_pattern{1,2}=zeros(NN,1);
+        cell_pattern{1,3}=zeros(NN,NN);
+        cell_pattern{1,4}=ones(NN,NN)*1/NN;
+        cell_pattern{1,5}=ones(NN,1);
+        barpredict(1)=barseq(1);
+        patcount=zeros(1,N);
+        
+        for j=1:length(barseq)-1
+            probsarray=zeros(N,NN);
+            for n=1:N
+                if j>=n
+                    [cell_pattern,patcount,probsarray]=datacollectlearnbar(barseq,j,n,patcount,cell_pattern,NN,probsarray);
+                    
+                end
+            end
+            
+            if size(probsarray,2)>1
+                probsarrayscore{j}=max(sum(probsarray));
+                scoreent(j)=max(sum(probsarray));
+                count=count+1;
+            else
+                probsarrayscore{j}=max(probsarray);
+                scoreent(j)=max(probsarray);
+                count=count+1;
+            end
+            if size(probsarray,1)==1
+                maxprob{j+1}=find(probsarray==max(probsarray));
+                minprob=find(probsarray==min(probsarray));
+            else
+                format long
+                newprobs=sum(probsarray);
+                maxprob{j+1}=find(newprobs==max(newprobs));
+                minprob=find(newprobs==min(newprobs));
+            end
+            
+            % make predictions as to the next note in the piece
+            
+            if size(maxprob{j+1},2)>1
+                choice=randi(size(maxprob{j+1},2));
+                barpredict(j+1)=maxprob{j+1}(choice);
+                equalcount=equalcount+1;
+                equalindex(equalcount)=j+1;
+                
+            else
+                
+                
+                barpredict(j+1)=maxprob{j+1};
+            end
+            clear probsindex
+            clear probsarray
+            clear maxindex
+            clear index
+            clear minprob
+            clear probmin
+            clear probmax
+            
+            
+            
+            
+            
+            predict(((j-1)*barsize)+1:((j-1)*barsize)+barsize)=bar_pattern(barpredict(j),:);
+            
+            
+        end
+        
+        j=length(barseq);
+        predict(((j-1)*barsize)+1:((j-1)*barsize)+barsize)=bar_pattern(barpredict(j),:);
+        
+        conf=confusionmat(predict, song(1:length(predict)));
+        predscore(1)=1-((conf(1,2)+conf(2,1))/sum(sum(conf)));
+        predscore(2)=equalcount;
+        
+        prediction{barsize}=predict;
+        comparmat{barsize}(1,:)=strrep(num2str(song(1:length(predict))),' ','');
+        comparmat{barsize}(2,:)=strrep(num2str(predict),' ','');
+        if showsong==1
+            
+            customshowalign(comparmat);
+        end
+        
+        clear new* max* j* score* probs* cell* change* choice equal* bar_*
+        clear barcell* barcount* NN M error i ii patcount predict barseq barp* add n*
+        clear conf
+%         K
+%     end
+    barsize;
+    predscores(iterate)=predscore(1);
+    clear predscore
+end
+end
+predscores
+% [p,newsong]=createsong(piece,1000,0,0,0);
